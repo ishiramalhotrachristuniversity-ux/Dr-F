@@ -1,5 +1,9 @@
 module.exports = async function (req, res) {
   const body = req.body;
+  
+  // جلوگیری از خطاهای مربوط به درخواست‌های خالی
+  if (!body) return res.status(200).send('OK');
+  
   const fetch = (await import('node-fetch')).default;
 
   // ---------------------------------------------------------
@@ -74,7 +78,7 @@ module.exports = async function (req, res) {
   const phoneRegex = /(09|\+989|۹۸۹|۰۹)[0-9۰-۹\s\-]{8,11}/;
   
   if (phoneRegex.test(userText)) {
-    // ۱. ارسال پیام تایید و محترمانه به کاربر
+    // ۱. ارسال پیام تایید به کاربر
     const successMessage = "اطلاعات شما با موفقیت در سیستم پذیرش ثبت شد. از آشنایی با شما بسیار خوشحالیم! 🌿\n\nتیم مدیریت به‌زودی برای هماهنگی وقت مشاوره با شما تماس خواهد گرفت. به دنیای پیشرو مدرسه دکتر فورد خوش آمدید.";
     
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -83,18 +87,18 @@ module.exports = async function (req, res) {
       body: JSON.stringify({ chat_id: chatId, text: successMessage })
     });
 
-    // ۲. ارسال گزارش به گروه مدیریت شما
+    // ۲. ارسال گزارش به گروه مدیریت شما (نسخه ایمن بدون باگ)
     const adminGroupId = "-1004322710422"; 
-    const username = message.from.username ? `@${message.from.username}` : "بدون آیدی (پنهان)";
+    const username = message.from.username ? `@${message.from.username}` : "بدون آیدی";
     const firstName = message.from.first_name || "";
     const lastName = message.from.last_name || "";
     
-    const adminNotification = `🔔 **گزارش لید جدید - دکتر فورد**\n\n👤 نام اکانت: ${firstName} ${lastName}\n🔗 آیدی فرستنده: ${username}\n💬 متن پیام (حاوی شماره):\n${userText}`;
+    const adminNotification = `🔔 گزارش لید جدید - دکتر فورد\n\n👤 نام اکانت: ${firstName} ${lastName}\n🔗 آیدی فرستنده: ${username}\n💬 متن پیام:\n${userText}`;
     
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: adminGroupId, text: adminNotification, parse_mode: "Markdown" })
+      body: JSON.stringify({ chat_id: adminGroupId, text: adminNotification })
     });
 
     return res.status(200).json({ success: true });
@@ -103,7 +107,7 @@ module.exports = async function (req, res) {
   // ---------------------------------------------------------
   // بخش چهارم: هوش مصنوعی جمینای برای پاسخگویی به سایر سوالات
   // ---------------------------------------------------------
-  const knowledgeBase = `مدیریت مجموعه: شیوا عاشوری. شعار: پیوند تفکر استراتژیک و تکنولوژی. دوره‌ها: ۱. فیلم‌سازی AI ۲. طراحی صنعتی ۳. مهندسی ایجنت‌های هوشمند. ثبت‌نام: ارسال نام و شماره تماس جهت مشاوره. لحن: سرد، مینیمال، حرفه‌ای و مدیریتی.`;
+  const knowledgeBase = `مدیریت مجموعه: مرضیه عاشوری. شعار: پیوند تفکر استراتژیک و تکنولوژی. دوره‌ها: ۱. فیلم‌سازی AI ۲. طراحی صنعتی ۳. مهندسی ایجنت‌های هوشمند. ثبت‌نام: ارسال نام و شماره تماس جهت مشاوره. لحن: سرد، مینیمال، حرفه‌ای و مدیریتی.`;
 
   try {
     const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
