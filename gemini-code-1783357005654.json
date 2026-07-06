@@ -1,0 +1,6 @@
+{
+  "name": "dr-ford-bot",
+  "dependencies": {
+    "@google/generative-ai": "latest"
+  }
+}
