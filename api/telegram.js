@@ -6,30 +6,24 @@ module.exports = async function (req, res) {
   const userText = message.text.trim();
   const chatId = message.chat.id;
 
-  const knowledgeBase = `مدیریت مجموعه: شیوا عاشوری. شعار: پیوند تفکر استراتژیک و تکنولوژی. دوره‌ها: فیلم‌سازی AI، طراحی صنعتی، مهندسی ایجنت‌های هوشمند. ثبت‌نام: ارسال نام و شماره تماس.`;
+  // لیست پاسخ‌های حرفه‌ای (از پیش ساخته)
+  const responses = {
+    "/start": "به مدرسه هوش مصنوعی دکتر فورد خوش آمدید. بستری برای پیوند میان تفکر استراتژیک و تکنولوژی‌های نوظهور. چگونه می‌توانیم در مسیر حرفه‌ای شما را همراهی کنیم؟",
+    "درباره مدرسه": "مدرسه دکتر فورد؛ کانون تخصصیِ پژوهش و آموزش در حوزه‌های فیلم‌سازیِ AI، طراحی صنعتی و معماریِ سیستم‌های هوشمند (Agents). رویکرد ما متمرکز بر خروجی‌های استاندارد و پیشرو است.",
+    "دوره ها": "دپارتمان‌های آموزشی ما شامل: ۱. فیلم‌سازی هوشمند ۲. طراحی صنعتی ۳. مهندسی ایجنت‌ها. برای دسترسی به جزئیاتِ سرفصلِ هر دپارتمان، نام آن را ارسال کنید.",
+    "ثبت نام": "برای بررسیِ شرایطِ پذیرش و دریافت وقتِ مشاوره اختصاصی، «نام و شماره تماس» خود را ارسال فرمایید تا واحد پذیرش در اولین فرصت با شما ارتباط برقرار کند.",
+    "تماس": "تیم مدیریتِ مجموعه آماده‌ی بررسیِ پیشنهادات و پاسخگویی به پرسش‌های تخصصی شماست. لطفاً پیام خود را ثبت کنید."
+  };
 
-  try {
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `شما دستیار شیوا عاشوری هستید. اطلاعات: ${knowledgeBase}. سوال: ${userText}` }] }]
-      })
-    });
+  // تعیین پاسخ
+  let replyText = responses[userText] || "پیام شما دریافت شد. تیم مدیریت مدرسه دکتر فورد در اسرع وقت بررسی و پاسخگویی خواهد کرد.";
 
-    const geminiData = await geminiRes.json();
-    
-    // دریافت پاسخ یا متن خطا
-    const aiText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || JSON.stringify(geminiData);
-
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: aiText })
-    });
-  } catch (error) {
-    console.error("Error:", error);
-  }
+  // ارسال پاسخ نهایی
+  await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: replyText })
+  });
 
   return res.status(200).json({ success: true });
 };
