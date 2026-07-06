@@ -1,35 +1,27 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
 module.exports = async function (req, res) {
-  if (req.method !== 'POST') {
-    return res.status(200).send('Dr. Ford Academy Bot is running!');
-  }
+  if (req.method !== 'POST') return res.status(200).send('Bot is active');
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-  const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+  const { message } = req.body;
+  if (!message || !message.text) return res.status(200).send('OK');
 
-  try {
-    const body = req.body;
-    const chatId = body?.message?.chat?.id;
-    const userText = body?.message?.text;
+  const fetch = (await import('node-fetch')).default;
 
-    if (!userText) return res.status(200).json({ success: true });
+  // 1. Send to Gemini
+  const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: message.text }] }] })
+  });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    const systemInstruction = "شما دستیار هوشمند و مشاور آموزشی «مدرسه هوش مصنوعی دکتر فورد» هستید. لحن شما حرفه‌ای، مینیمال، و مدیریتی است. تمرکز شما روی دوره‌های فیلم‌سازی، طراحی صنعتی و ایجنت‌های هوشمند است.";
-    
-    const result = await model.generateContent(`${systemInstruction}\n\nکاربر: ${userText}\nمشاور:`);
-    const aiResponse = await result.response.text();
+  const geminiData = await geminiRes.json();
+  const aiText = geminiData.candidates[0].content.parts[0].text;
 
-    await fetch(`${TELEGRAM_API}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: aiResponse }),
-    });
+  // 2. Send back to Telegram
+  await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: message.chat.id, text: aiText })
+  });
 
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  return res.status(200).json({ success: true });
 };
