@@ -3,13 +3,14 @@ module.exports = async function (req, res) {
   const fetch = (await import('node-fetch')).default;
 
   // ---------------------------------------------------------
-  // بخش اول: مدیریت کلیک روی دکمه‌های شیشه‌ای
+  // بخش اول: مدیریت کلیک روی دکمه‌های شیشه‌ای و ارسال ویس
   // ---------------------------------------------------------
   if (body.callback_query) {
     const callbackData = body.callback_query.data;
     const chatId = body.callback_query.message.chat.id;
     const callbackId = body.callback_query.id;
 
+    // دیتابیس ویس‌های اختصاصی شما
     const buttonVoices = {
       "courses_info": "AwACAgQAAxkBAANJakwJ8Ghtwn1H7B2jtt71-rKen3sAAo0eAAL_gWFSqOFgmKDeSuI8BA",
       "contact_info": "AwACAgQAAxkBAANKakwJ8OP_cGMrH8VoB9Hsdxe6tKgAAo4eAAL_gWFS1mjxcszXDPs8BA"
@@ -26,6 +27,7 @@ module.exports = async function (req, res) {
       });
     }
 
+    // برداشتن حالت لودینگ از روی دکمه
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -44,6 +46,7 @@ module.exports = async function (req, res) {
   const userText = message.text.trim();
   const chatId = message.chat.id;
 
+  // ویس خوش‌آمدگویی اصلی
   const welcomeVoiceId = "AwACAgQAAxkBAANAakwHVA1iVuhbQqBiRmzY4G8d4fcAAkgkAALXy2BSwr3WPT-fBME8BA";
 
   if (userText === "/start" || userText === "سلام") {
@@ -66,12 +69,12 @@ module.exports = async function (req, res) {
   }
 
   // ---------------------------------------------------------
-  // بخش سوم: تشخیص ارسال شماره تماس
+  // بخش سوم: سیستم پذیرش هوشمند (تشخیص شماره و ارسال به گروه مدیریت)
   // ---------------------------------------------------------
-  // این الگو شماره موبایل‌های ایرانی (با حروف انگلیسی یا فارسی) را تشخیص می‌دهد
   const phoneRegex = /(09|\+989|۹۸۹|۰۹)[0-9۰-۹\s\-]{8,11}/;
   
   if (phoneRegex.test(userText)) {
+    // ۱. ارسال پیام تایید و محترمانه به کاربر
     const successMessage = "اطلاعات شما با موفقیت در سیستم پذیرش ثبت شد. از آشنایی با شما بسیار خوشحالیم! 🌿\n\nتیم مدیریت به‌زودی برای هماهنگی وقت مشاوره با شما تماس خواهد گرفت. به دنیای پیشرو مدرسه دکتر فورد خوش آمدید.";
     
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -79,11 +82,26 @@ module.exports = async function (req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text: successMessage })
     });
+
+    // ۲. ارسال گزارش به گروه مدیریت شما
+    const adminGroupId = "-1004322710422"; 
+    const username = message.from.username ? `@${message.from.username}` : "بدون آیدی (پنهان)";
+    const firstName = message.from.first_name || "";
+    const lastName = message.from.last_name || "";
+    
+    const adminNotification = `🔔 **گزارش لید جدید - دکتر فورد**\n\n👤 نام اکانت: ${firstName} ${lastName}\n🔗 آیدی فرستنده: ${username}\n💬 متن پیام (حاوی شماره):\n${userText}`;
+    
+    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: adminGroupId, text: adminNotification, parse_mode: "Markdown" })
+    });
+
     return res.status(200).json({ success: true });
   }
 
   // ---------------------------------------------------------
-  // بخش چهارم: هوش مصنوعی برای پاسخ به سایر سوالات
+  // بخش چهارم: هوش مصنوعی جمینای برای پاسخگویی به سایر سوالات
   // ---------------------------------------------------------
   const knowledgeBase = `مدیریت مجموعه: شیوا عاشوری. شعار: پیوند تفکر استراتژیک و تکنولوژی. دوره‌ها: ۱. فیلم‌سازی AI ۲. طراحی صنعتی ۳. مهندسی ایجنت‌های هوشمند. ثبت‌نام: ارسال نام و شماره تماس جهت مشاوره. لحن: سرد، مینیمال، حرفه‌ای و مدیریتی.`;
 
